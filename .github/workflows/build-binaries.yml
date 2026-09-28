@@ -1,0 +1,25 @@
+---
+name: Build vendored MinIO binaries
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build pinned source archives
+        run: ./build/build.sh
+      - name: Verify generated checksums
+        run: sha256sum --check SHA256SUMS
+      - name: Upload source-built artifacts for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: minio-source-built-binaries
+          path: |
+            files/bin/
+            SHA256SUMS
+            vars/binary_checksums.yml
+          if-no-files-found: error

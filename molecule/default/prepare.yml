@@ -1,7 +1,17 @@
 ---
-- name: Prepare
+- name: Prepare Molecule hosts
   hosts: all
   become: true
   gather_facts: false
-
-  tasks: []
+  tasks:
+    - name: Wait for systemd to become available
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-system-running
+      register: molecule_systemd_state
+      changed_when: false
+      failed_when: molecule_systemd_state.rc not in [0, 1]
+      retries: 10
+      delay: 1
+      until: molecule_systemd_state.rc in [0, 1]

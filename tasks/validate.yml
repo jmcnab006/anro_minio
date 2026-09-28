@@ -1,0 +1,76 @@
+---
+- name: Validate supported operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'Debian'
+      - ansible_distribution in _minio_supported_distributions
+    fail_msg: >-
+      This role supports Debian-family hosts tested on Debian and Ubuntu only.
+      Detected {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+- name: Validate supported architecture
+  ansible.builtin.assert:
+    that:
+      - ansible_architecture in _minio_arch_map
+    fail_msg: >-
+      Unsupported architecture {{ ansible_architecture }}. Supported architectures:
+      {{ _minio_arch_map.keys() | list | join(', ') }}.
+
+- name: Set MinIO vendored architecture
+  ansible.builtin.set_fact:
+    _minio_arch: "{{ _minio_arch_map[ansible_architecture] }}"
+
+- name: Load source-built binary checksums
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/vars/binary_checksums.yml"
+
+- name: Validate required server credentials
+  ansible.builtin.assert:
+    that:
+      - minio_root_user | string | length >= 3
+      - minio_root_password | string | length >= 8
+      - minio_root_user != 'minioadmin'
+      - minio_root_password != 'minioadmin'
+      - minio_root_user != 'admin' or minio_root_password not in ['admin', 'password']
+    fail_msg: >-
+      Explicit non-default MinIO root credentials are required. Store production
+      credentials in Ansible Vault or another secret-management integration.
+  no_log: true
+  when:
+    - minio_install_server | bool
+    - minio_configure_server | bool
+
+- name: Validate MinIO data directory configuration
+  ansible.builtin.assert:
+    that:
+      - minio_server_datadirs | length > 0
+      - minio_server_datadirs | select('match', '^/') | list | length == minio_server_datadirs | length
+      - minio_server_datadirs | select('search', '\\s') | list | length == 0
+    fail_msg: MinIO data directories must be absolute paths without whitespace.
+  when: minio_install_server | bool
+
+- name: Validate destructive wipe confirmation
+  ansible.builtin.assert:
+    that:
+      - minio_wipe_all_drives_confirm | bool
+    fail_msg: >-
+      minio_wipe_all_drives=true requires minio_wipe_all_drives_confirm=true.
+      This guard exists because all configured MinIO data is irrecoverably deleted.
+  when: minio_wipe_all_drives | bool
+
+- name: Validate TLS inputs
+  ansible.builtin.assert:
+    that:
+      - minio_tls_cert_src | length > 0
+      - minio_tls_key_src | length > 0
+    fail_msg: TLS certificate and private-key source files are required when TLS is enabled.
+  when: minio_tls_enabled | bool
+
+- name: Validate vendored binary checksums are populated
+  ansible.builtin.assert:
+    that:
+      - (not (minio_install_server | bool)) or _minio_binary_checksums[_minio_arch].minio | length == 64
+      - (not (minio_install_client | bool)) or _minio_binary_checksums[_minio_arch].mc | length == 64
+    fail_msg: >-
+      Vendored binary checksums are missing. Run build/build.sh (or make binaries)
+      and commit files/bin plus vars/binary_checksums.yml before deploying this role.

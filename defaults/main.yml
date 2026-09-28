@@ -1,0 +1,51 @@
+---
+# Installation controls. Server and client binaries are copied from files/bin/<arch>/.
+minio_install_server: true
+minio_install_client: true
+minio_configure_server: true
+
+# Binary destinations on managed hosts.
+minio_server_bin: /usr/local/bin/minio
+minio_client_bin: /usr/local/bin/mc
+
+# Dedicated unprivileged service identity.
+minio_server_user: minio
+minio_server_group: minio
+minio_server_user_shell: /usr/sbin/nologin
+minio_server_user_home: /var/lib/minio
+
+# Service configuration.
+minio_server_envfile: /etc/default/minio
+minio_server_service: minio
+minio_server_address: ':9000'
+minio_console_address: ':9001'
+minio_server_datadirs:
+  - /var/lib/minio
+minio_server_cluster_nodes: []
+
+# REQUIRED when configuring the server. No insecure production defaults are supplied.
+minio_root_user: ''
+minio_root_password: ''
+
+# Additional environment entries. Do not place secrets here unless inventory is Vault-protected.
+# Values are quoted safely by the environment template.
+minio_server_env_extra: []
+
+# TLS is opt-in. Supply controller-side certificate/key files when enabled.
+minio_tls_enabled: false
+minio_tls_cert_src: ''
+minio_tls_key_src: ''
+minio_tls_cert_dir: /etc/minio/certs
+minio_tls_cert_file: public.crt
+minio_tls_key_file: private.key
+
+# Service hardening. Disable only after documenting a concrete compatibility requirement.
+minio_systemd_hardening: true
+
+# Destructive operation protection. BOTH variables must be true to erase data directories.
+minio_wipe_all_drives: false
+minio_wipe_all_drives_confirm: false
+
+# Optional packages needed by this role. ca-certificates supports TLS clients/health checks.
+minio_packages:
+  - ca-certificates

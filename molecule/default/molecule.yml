@@ -1,28 +1,42 @@
 ---
-ansible:
-  cfg:
-    defaults:
-      deprecation_warnings: false
-      callbacks_enabled: profile_tasks
-      pipelining: true
-      roles_path: ${MOLECULE_PROJECT_DIRECTORY}/..
-  executor:
-    args:
-      ansible_playbook:
-        - --inventory=${MOLECULE_SCENARIO_DIRECTORY}/inventory/
-
 dependency:
   name: galaxy
-  options:
-    requirements-file: ${MOLECULE_SCENARIO_DIRECTORY}/requirements.yml
-
+driver:
+  name: docker
+platforms:
+  - name: minio-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    pre_build_image: true
+    privileged: true
+    command: /sbin/init
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /run/lock
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      minio-debian12:
+        # Molecule-only credentials. Production has no default credentials.
+        minio_root_user: molecule-root
+        minio_root_password: molecule-only-password-change-me
+        minio_server_datadirs:
+          - /var/lib/minio/data
+        minio_server_address: '127.0.0.1:9000'
+        minio_console_address: '127.0.0.1:9001'
+verifier:
+  name: ansible
 scenario:
   test_sequence:
     - dependency
-    - destroy
+    - syntax
     - create
     - prepare
     - converge
     - idempotence
     - verify
+    - cleanup
     - destroy

@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: anro_minio
+  author: jmcnab006
+  description: Secure installation and configuration of source-built MinIO Community Edition.
+  license: MIT
+  min_ansible_version: '2.16'
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - minio
+    - storage
+    - s3
+dependencies: []

@@ -1,0 +1,24 @@
+---
+# Deliberately implemented with file state transitions rather than rm -rf. The double
+# opt-in is validated before this task file can execute.
+- name: Stop MinIO before destructive data wipe
+  ansible.builtin.systemd_service:
+    name: "{{ minio_server_service }}"
+    state: stopped
+  failed_when: false
+  when: minio_configure_server | bool
+
+- name: Remove MinIO data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ minio_server_datadirs }}"
+
+- name: Recreate empty MinIO data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ minio_server_user }}"
+    group: "{{ minio_server_group }}"
+    mode: "0750"
+  loop: "{{ minio_server_datadirs }}"

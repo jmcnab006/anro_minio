@@ -1,134 +1,166 @@
-# Ansible Minio role
+# anro_minio v2
 
-Install and Configure Minio S3 Object-Storage.
+Production-oriented Ansible role for installing MinIO Community Edition and `mc` from **source-built, vendored binaries**. Managed hosts never download MinIO and do not require Go or Internet access.
 
-This role allows you to deploy Minio as single-node, as well as highly available distributed multi-node setup.
+> **Upstream status:** MinIO Community Edition and `mc` are archived public GitHub projects. Review the AGPLv3 obligations and your organization's support/security requirements before production use. This role does not convert archived software into a supported product.
 
-It is recommended to deploy a load balancer such as HAProxy when setting up Minio in distributed mode with multiple nodes.
+## Security model
 
-## Requirements
+* No default root credentials. Credentials must be supplied explicitly and should come from Ansible Vault or a secret manager.
+* Source builds are pinned to immutable 40-character Git commit IDs.
+* Managed hosts receive binaries through `ansible.builtin.copy`; runtime downloads are forbidden by design.
+* SHA-256 values are generated during the trusted build and enforced by the role.
+* MinIO runs as an unprivileged system account.
+* The credential-bearing environment file is `0640 root:minio` and templating uses `no_log`.
+* TLS private keys are `0600`.
+* systemd sandboxing includes `NoNewPrivileges`, `ProtectSystem=strict`, kernel/control-group protections, and explicit writable storage paths.
+* Destructive storage wipe requires two independent boolean confirmations.
+* Molecule performs functional S3-style create/upload/download/compare/delete verification with `mc`.
 
-A Debian-based managed node. Package installations utilize APT.
+## Important: pin the archived source commits
 
-## Dependencies
+Edit `build/versions.env` and replace both placeholders with **verified full commit IDs** from the official public archives:
 
-None
-
-## Use the role
-
-Add a `requirements.yaml` into your playbook repository and add this repository as a role source.
-
-```yaml
-roles:
-  - name: anro_minio
-    src: https://github.com/jmcnab006/anro_minio.git
-    version: main
-    scm: git
+```text
+MINIO_COMMIT=<40-character commit>
+MC_COMMIT=<40-character commit>
 ```
 
-Use the role name specified in the `requirements.yaml` to utilize the play in a playbook.
+Do not use `master`, `latest`, a floating tag, or a shortened hash for release builds. The build fails unless both values are full SHA-1 Git object IDs and verifies the checked-out `HEAD` exactly.
+
+## Build and vendor binaries
+
+Requirements on the build workstation/CI runner:
+
+* Docker with BuildKit
+* Python 3
+* Internet access to the official GitHub archives during the controlled build
+
+Run:
+
+```bash
+make binaries
+sha256sum --check SHA256SUMS
+```
+
+The build creates:
+
+```text
+files/bin/amd64/minio
+files/bin/amd64/mc
+files/bin/arm64/minio
+files/bin/arm64/mc
+SHA256SUMS
+vars/binary_checksums.yml
+```
+
+Commit these artifacts together with the pinned `build/versions.env`. This intentionally makes the role repository itself the deployment artifact. Binary changes therefore require a normal code-review path.
+
+### Why binaries are not built on managed hosts
+
+Compiling on a managed host expands the production attack surface, requires Go/Git/network access, slows convergence, and makes deployments less reproducible. Build once in controlled CI, review checksums/provenance, then deploy offline.
+
+## Use
 
 ```yaml
-- hosts: 
-  - minio01 
-  - minio02
-  - minio03
-  - minio04
+---
+- name: Configure MinIO
+  hosts: minio
+  become: true
   roles:
     - role: anro_minio
       vars:
+        minio_root_user: "{{ vault_minio_root_user }}"
+        minio_root_password: "{{ vault_minio_root_password }}"
         minio_server_datadirs:
-          - /data/disk1
-          - /data/disk2
-        minio_server_cluster_nodes:
-          - http://minio0{1...4}.example.com:9000/data/disk{1...2}
-        minio_root_user: admin
-        minio_root_password: "{{ vault_minio_password }}"
-        minio_server_env_extra:
-          - name: MINIO_BROWSER_REDIRECT_URL
-            value: "https://minio.example.com"
-
+          - /srv/minio/data
 ```
 
-## Role variables
+The role supports `x86_64` and `aarch64` and maps them to the vendored `amd64` and `arm64` binaries.
 
-Available variables are listed below, along with default values. See also `defaults/main.yaml`.
-##### `minio_server_bin: "/usr/local/bin/minio"`
-
-Sets the binary filename and path for the minio server when downloading the latest release.
-
-##### `minio_client_bin: "/usr/local/bin/mc"`
-
-Sets the binary filename and path for the minio client when downloading the latest release.
-
-##### `minio_server_release: ""`
-
-Sets the server release .deb package to download and install using the [Minio server downloads archive](https://dl.minio.io/server/minio/release/linux-amd64/archive/). Should be a string value (i.e "20250117232550.0.0"). Defaults to empty string to download the most recent binary file and saves it to the `minio_server_bin` path. 
-
-##### `minio_client_release: ""`
-
-Sets the client release .deb package to download and install using the [Minio client downloads archive](https://dl.minio.io/client/mc/release/linux-amd64/archive/). Should be a string value (i.e "20250117232550.0.0"). Defaults to empty string to download the most recent binary file and saves it to the `minio_client_bin` path. Typically these versions should be similar to the server versions.
-
-##### `minio_server_datadirs: ['/var/lib/minio']`
-
-Sets the default data directories for minio installation. As an array each mounted disk path should be added. Drives should be formatted xfs with a drive label and mounted in the fstab using label based mounting. [Minio checklist storage](https://min.io/docs/minio/linux/operations/checklists/hardware.html#storage)
-
-
-##### `minio_server_cluster_nodes: []`
-
-Sets the cluster definition string (i.e. "https://minio-0{1...5}.example.com:9000/mnt/minio-disk{1...2}"). This string example can be obtained from the [Minio Erasure Code Calculator](https://min.io/product/erasure-code-calculator). Each element is in the array is a [Minio Server Pool](https://blog.min.io/server-pools-streamline-storage-operations/). A Minio cluster can be composed of one or more Server Pools. 
-
-The following example would define a cluster of 3 pools of 5 nodes `minio-01` - `minio-05`, `minio-11` - `minio-15` and `minio-21` - `minio-25` each having 2 disks mounted on `/mnt/minio-disk1` and `/mnt/minio-disk2` :
+## TLS
 
 ```yaml
-minio_server_cluster_nodes:
-  - "https://minio-0{1...5}.example.com:9000/mnt/minio-disk{1...2}"
-  - "https://minio-1{1...5}.example.com:9000/mnt/minio-disk{1...2}"
-  - "https://minio-2{1...5}.example.com:9000/mnt/minio-disk{1...2}"
-
+minio_tls_enabled: true
+minio_tls_cert_src: files/minio.example.com.crt
+minio_tls_key_src: files/minio.example.com.key
 ```
 
-##### `minio_server_env_extra: []`
+The certificate and key are copied from the Ansible controller. Protect source private keys with appropriate repository/Vault controls.
 
-Additional environment variables to be set in minio server environment. Environment variables are defined on [Minio Server Environment Variables](https://min.io/docs/minio/linux/reference/minio-server/settings.html)
+## Distributed mode
 
-Examples: 
+For distributed MinIO, populate `minio_server_cluster_nodes`. The role joins entries into `MINIO_VOLUMES`. All nodes must use consistent cluster configuration and credentials. Validate your topology against the archived upstream documentation before production deployment.
+
+## Destructive wipe
+
+Data wiping is intentionally difficult to enable:
+
 ```yaml
-minio_server_env_extra:
-  - name: MINIO_BROWSER_REDIRECT_URL
-    value: "https://minio.example.com"
-  - name: MINIO_STORAGE_CLASS_STANDARD
-    value: "EC:3"
-  - name: MINIO_PROMETHEUS_URL
-    value: "http://prometheus.example.com:9090"
-  - name: MINIO_PROMETHEUS_JOB_ID
-    value: "minio-job"
-  - name: MINIO_PROMETHEUS_AUTH_TYPE
-    value: "public"
-  - name: MINIO_ERASURE_SET_DRIVE_COUNT 
-    value: 4
+minio_wipe_all_drives: true
+minio_wipe_all_drives_confirm: true
 ```
 
-##### `minio_install_server: true`
+Both must be true. This removes every path in `minio_server_datadirs`. Never set these values as persistent inventory defaults.
 
-Enable or disable installing minio server.
+## Molecule / Docker
 
-##### `minio_install_client: true`
+The default scenario uses a privileged Debian 12 systemd container because this role manages a native systemd service. Docker is a test substrate, not the production deployment model.
 
-Enable or disable installing minio client.
+Install test dependencies, build the vendored binaries, and run:
 
-##### `minio_configure_server: true`
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install 'ansible-core==2.17.*' ansible-lint molecule 'molecule-plugins[docker]' docker
+ansible-galaxy collection install -r molecule/default/requirements.yml
+make binaries
+ansible-lint .
+molecule test
+```
 
-Enable or disable configuring minio server.
+The Molecule sequence includes syntax, converge, **idempotence**, and end-to-end verify.
 
-##### `minio_root_user: "admin"`
+### End-to-end verify coverage
 
-Default admin user for console login. 
+`molecule/default/verify.yml` verifies:
 
-##### `minio_root_password: "admin"`
+1. systemd service is enabled and running;
+2. installed binaries are executable and SHA-256-identical to vendored artifacts;
+3. credential environment file ownership/mode;
+4. `/minio/health/ready` returns HTTP 200;
+5. systemd sandbox properties are active;
+6. `mc` authenticates using an isolated temporary config;
+7. bucket creation;
+8. object upload;
+9. object download;
+10. byte-for-byte content validation;
+11. object deletion;
+12. bucket deletion;
+13. cleanup of temporary client credentials.
 
-Default admin password for console login. This should be overwritten in the role variables. 
+The test credentials exist only in Molecule inventory. Production defaults remain empty.
 
-##### `minio_wipe_all_drives: false`
+## CI
 
-Wipes all data from all data drives specified in `minio_server_datadirs`. Use with **_EXTREME CAUTION THE DATA IS UNRECOVERABLE_**.
+`.github/workflows/test.yml` runs `ansible-lint` and Molecule. `.github/workflows/build-binaries.yml` is manual and builds the pinned sources, validates checksums, and uploads artifacts for review. A recommended release process is:
+
+1. review upstream archived source commit;
+2. update the pinned commit;
+3. run the binary build workflow;
+4. inspect build output and `SHA256SUMS`;
+5. commit the four binaries, manifest, generated Ansible checksum file, and pin change in one reviewed commit;
+6. run Molecule;
+7. tag the role release.
+
+## Validation
+
+```bash
+ansible-lint .
+ansible-playbook --syntax-check molecule/default/converge.yml
+molecule test
+```
+
+## License and upstream source
+
+This role's automation code retains the repository's role licensing choice. The vendored MinIO and `mc` binaries are derivative build artifacts of their upstream projects and remain subject to the upstream AGPLv3 license and notices. Preserve upstream license/source availability and obtain legal guidance for your distribution/use case where appropriate.
