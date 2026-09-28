@@ -1,20 +1,20 @@
 ---
 - name: Install source-built MinIO client binary
   ansible.builtin.copy:
-    src: "bin/{{ _minio_arch }}/mc"
-    dest: "{{ minio_client_bin }}"
+    src: "bin/{{ _anro_minio_arch }}/mc"
+    dest: "{{ anro_minio_client_bin }}"
     owner: root
     group: root
     mode: "0755"
 
 - name: Verify installed MinIO client SHA-256
   ansible.builtin.stat:
-    path: "{{ minio_client_bin }}"
+    path: "{{ anro_minio_client_bin }}"
     checksum_algorithm: sha256
-  register: minio_client_binary_stat
+  register: anro_minio_client_binary_stat
 
 - name: Assert installed MinIO client checksum
   ansible.builtin.assert:
     that:
-      - minio_client_binary_stat.stat.checksum == _minio_binary_checksums[_minio_arch].mc
+      - anro_minio_client_binary_stat.stat.checksum == _anro_minio_binary_checksums[_anro_minio_arch].mc
     fail_msg: Installed MinIO client binary does not match the trusted build checksum.

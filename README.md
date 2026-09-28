@@ -22,7 +22,7 @@ Production-oriented Ansible role for installing MinIO Community Edition and `mc`
 Edit `build/versions.env` and replace both placeholders with **verified full commit IDs** from the official public archives:
 
 ```text
-MINIO_COMMIT=<40-character commit>
+anro_minio_COMMIT=<40-character commit>
 MC_COMMIT=<40-character commit>
 ```
 
@@ -70,9 +70,9 @@ Compiling on a managed host expands the production attack surface, requires Go/G
   roles:
     - role: anro_minio
       vars:
-        minio_root_user: "{{ vault_minio_root_user }}"
-        minio_root_password: "{{ vault_minio_root_password }}"
-        minio_server_datadirs:
+        anro_minio_root_user: "{{ vault_anro_minio_root_user }}"
+        anro_minio_root_password: "{{ vault_anro_minio_root_password }}"
+        anro_minio_server_datadirs:
           - /srv/minio/data
 ```
 
@@ -81,27 +81,27 @@ The role supports `x86_64` and `aarch64` and maps them to the vendored `amd64` a
 ## TLS
 
 ```yaml
-minio_tls_enabled: true
-minio_tls_cert_src: files/minio.example.com.crt
-minio_tls_key_src: files/minio.example.com.key
+anro_minio_tls_enabled: true
+anro_minio_tls_cert_src: files/minio.example.com.crt
+anro_minio_tls_key_src: files/minio.example.com.key
 ```
 
 The certificate and key are copied from the Ansible controller. Protect source private keys with appropriate repository/Vault controls.
 
 ## Distributed mode
 
-For distributed MinIO, populate `minio_server_cluster_nodes`. The role joins entries into `MINIO_VOLUMES`. All nodes must use consistent cluster configuration and credentials. Validate your topology against the archived upstream documentation before production deployment.
+For distributed MinIO, populate `anro_minio_server_cluster_nodes`. The role joins entries into `anro_minio_VOLUMES`. All nodes must use consistent cluster configuration and credentials. Validate your topology against the archived upstream documentation before production deployment.
 
 ## Destructive wipe
 
 Data wiping is intentionally difficult to enable:
 
 ```yaml
-minio_wipe_all_drives: true
-minio_wipe_all_drives_confirm: true
+anro_minio_wipe_all_drives: true
+anro_minio_wipe_all_drives_confirm: true
 ```
 
-Both must be true. This removes every path in `minio_server_datadirs`. Never set these values as persistent inventory defaults.
+Both must be true. This removes every path in `anro_minio_server_datadirs`. Never set these values as persistent inventory defaults.
 
 ## Molecule / Docker
 

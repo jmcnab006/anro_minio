@@ -3,14 +3,14 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: "{{ minio_server_user }}"
-    group: "{{ minio_server_group }}"
+    owner: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
     mode: "0750"
-  loop: "{{ minio_server_datadirs }}"
+  loop: "{{ anro_minio_server_datadirs }}"
 
 - name: Create MinIO configuration directory
   ansible.builtin.file:
-    path: "{{ minio_server_envfile | dirname }}"
+    path: "{{ anro_minio_server_envfile | dirname }}"
     state: directory
     owner: root
     group: root
@@ -19,47 +19,47 @@
 - name: Configure MinIO environment
   ansible.builtin.template:
     src: minio.env.j2
-    dest: "{{ minio_server_envfile }}"
+    dest: "{{ anro_minio_server_envfile }}"
     owner: root
-    group: "{{ minio_server_group }}"
+    group: "{{ anro_minio_server_group }}"
     mode: "0640"
   no_log: true
   notify: Restart MinIO
 
 - name: Create MinIO TLS directory
   ansible.builtin.file:
-    path: "{{ minio_tls_cert_dir }}"
+    path: "{{ anro_minio_tls_cert_dir }}"
     state: directory
-    owner: "{{ minio_server_user }}"
-    group: "{{ minio_server_group }}"
+    owner: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
     mode: "0750"
-  when: minio_tls_enabled | bool
+  when: anro_minio_tls_enabled | bool
 
 - name: Install MinIO TLS certificate
   ansible.builtin.copy:
-    src: "{{ minio_tls_cert_src }}"
-    dest: "{{ minio_tls_cert_dir }}/{{ minio_tls_cert_file }}"
-    owner: "{{ minio_server_user }}"
-    group: "{{ minio_server_group }}"
+    src: "{{ anro_minio_tls_cert_src }}"
+    dest: "{{ anro_minio_tls_cert_dir }}/{{ anro_minio_tls_cert_file }}"
+    owner: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
     mode: "0644"
-  when: minio_tls_enabled | bool
+  when: anro_minio_tls_enabled | bool
   notify: Restart MinIO
 
 - name: Install MinIO TLS private key
   ansible.builtin.copy:
-    src: "{{ minio_tls_key_src }}"
-    dest: "{{ minio_tls_cert_dir }}/{{ minio_tls_key_file }}"
-    owner: "{{ minio_server_user }}"
-    group: "{{ minio_server_group }}"
+    src: "{{ anro_minio_tls_key_src }}"
+    dest: "{{ anro_minio_tls_cert_dir }}/{{ anro_minio_tls_key_file }}"
+    owner: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
     mode: "0600"
   no_log: true
-  when: minio_tls_enabled | bool
+  when: anro_minio_tls_enabled | bool
   notify: Restart MinIO
 
 - name: Install hardened MinIO systemd unit
   ansible.builtin.template:
     src: minio.service.j2
-    dest: "/etc/systemd/system/{{ minio_server_service }}.service"
+    dest: "/etc/systemd/system/{{ anro_minio_server_service }}.service"
     owner: root
     group: root
     mode: "0644"
@@ -72,6 +72,6 @@
 
 - name: Enable and start MinIO service
   ansible.builtin.systemd_service:
-    name: "{{ minio_server_service }}"
+    name: "{{ anro_minio_server_service }}"
     enabled: true
     state: started

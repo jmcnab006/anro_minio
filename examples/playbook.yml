@@ -5,7 +5,7 @@
   roles:
     - role: anro_minio
       vars:
-        minio_root_user: "{{ vault_minio_root_user }}"
-        minio_root_password: "{{ vault_minio_root_password }}"
-        minio_server_datadirs:
+        anro_minio_root_user: "{{ vault_anro_minio_root_user }}"
+        anro_minio_root_password: "{{ vault_anro_minio_root_password }}"
+        anro_minio_server_datadirs:
           - /srv/minio/data

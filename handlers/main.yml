@@ -5,6 +5,6 @@
 
 - name: Restart MinIO
   ansible.builtin.systemd_service:
-    name: "{{ minio_server_service }}"
+    name: "{{ anro_minio_server_service }}"
     state: restarted
-  when: minio_configure_server | bool
+  when: anro_minio_configure_server | bool

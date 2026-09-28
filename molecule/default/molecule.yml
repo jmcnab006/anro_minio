@@ -1,32 +1,114 @@
 ---
+ansible:
+  cfg:
+    defaults:
+      deprecation_warnings: false
+      callbacks_enabled: profile_tasks
+      pipelining: true
+      roles_path: ${MOLECULE_PROJECT_DIRECTORY}/..
+
 dependency:
   name: galaxy
 driver:
   name: docker
+
 platforms:
-  - name: minio-debian12
-    image: geerlingguy/docker-debian12-ansible:latest
+  - name: minio-ubuntu2604-node01
+    image: docker.io/geerlingguy/docker-ubuntu2604-ansible:latest
     pre_build_image: true
     privileged: true
-    command: /sbin/init
+    command: /lib/systemd/systemd
     cgroupns_mode: host
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # MinIO rejects storage on the root filesystem. Give each cluster
+      # member an independent Docker volume to simulate dedicated storage.
+      - minio-node01-data:/data
     tmpfs:
       - /run
       - /run/lock
+      - /tmp
+    published_ports:
+      - "9010:9000"
+      - "9011:9001"
+    docker_networks:
+      - name: minio-molecule
+        ipam_config:
+          - subnet: "172.31.0.0/24"
+            gateway: "172.31.0.1"
+    networks:
+      - name: minio-molecule
+        ipv4_address: "172.31.0.21"
+
+  - name: minio-ubuntu2604-node02
+    image: docker.io/geerlingguy/docker-ubuntu2604-ansible:latest
+    pre_build_image: true
+    privileged: true
+    command: /lib/systemd/systemd
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # MinIO rejects storage on the root filesystem. Give each cluster
+      # member an independent Docker volume to simulate dedicated storage.
+      - minio-node02-data:/data
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    published_ports:
+      - "9020:9000"
+      - "9021:9001"
+    networks:
+      - name: minio-molecule
+        ipv4_address: "172.31.0.22"
+
+  - name: minio-ubuntu2604-node03
+    image: docker.io/geerlingguy/docker-ubuntu2604-ansible:latest
+    pre_build_image: true
+    privileged: true
+    command: /lib/systemd/systemd
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # MinIO rejects storage on the root filesystem. Give each cluster
+      # member an independent Docker volume to simulate dedicated storage.
+      - minio-node03-data:/data
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    published_ports:
+      - "9030:9000"
+      - "9031:9001"
+    networks:
+      - name: minio-molecule
+        ipv4_address: "172.31.0.23"
+
+  - name: minio-ubuntu2604-node04
+    image: docker.io/geerlingguy/docker-ubuntu2604-ansible:latest
+    pre_build_image: true
+    privileged: true
+    command: /lib/systemd/systemd
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # MinIO rejects storage on the root filesystem. Give each cluster
+      # member an independent Docker volume to simulate dedicated storage.
+      - minio-node04-data:/data
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    published_ports:
+      - "9040:9000"
+      - "9041:9001"
+    networks:
+      - name: minio-molecule
+        ipv4_address: "172.31.0.24"
+
 provisioner:
   name: ansible
-  inventory:
-    host_vars:
-      minio-debian12:
-        # Molecule-only credentials. Production has no default credentials.
-        minio_root_user: molecule-root
-        minio_root_password: molecule-only-password-change-me
-        minio_server_datadirs:
-          - /var/lib/minio/data
-        minio_server_address: '127.0.0.1:9000'
-        minio_console_address: '127.0.0.1:9001'
+
 verifier:
   name: ansible
 scenario:

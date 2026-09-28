@@ -5,3 +5,11 @@
   gather_facts: true
   roles:
     - role: anro_minio
+      vars:
+        # Molecule-only credentials. Production has no default credentials.
+        anro_minio_root_user: molecule-root
+        anro_minio_root_password: molecule-only-password-change-me
+        anro_minio_server_datadirs:
+          - /data
+        anro_minio_server_cluster_nodes:
+          - http://172.31.0.2{1...4}:9000/data

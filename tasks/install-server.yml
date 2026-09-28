@@ -1,38 +1,38 @@
 ---
 - name: Create MinIO system group
   ansible.builtin.group:
-    name: "{{ minio_server_group }}"
+    name: "{{ anro_minio_server_group }}"
     system: true
     state: present
 
 - name: Create MinIO system user
   ansible.builtin.user:
-    name: "{{ minio_server_user }}"
-    group: "{{ minio_server_group }}"
-    home: "{{ minio_server_user_home }}"
-    shell: "{{ minio_server_user_shell }}"
+    name: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
+    home: "{{ anro_minio_server_user_home }}"
+    shell: "{{ anro_minio_server_user_shell }}"
     system: true
     create_home: false
     state: present
 
 - name: Install source-built MinIO server binary
   ansible.builtin.copy:
-    src: "bin/{{ _minio_arch }}/minio"
-    dest: "{{ minio_server_bin }}"
+    src: "bin/{{ _anro_minio_arch }}/minio"
+    dest: "{{ anro_minio_server_bin }}"
     owner: root
     group: root
     mode: "0755"
-  register: minio_server_binary_copy
+  register: anro_minio_server_binary_copy
   notify: Restart MinIO
 
 - name: Verify installed MinIO server SHA-256
   ansible.builtin.stat:
-    path: "{{ minio_server_bin }}"
+    path: "{{ anro_minio_server_bin }}"
     checksum_algorithm: sha256
-  register: minio_server_binary_stat
+  register: anro_minio_server_binary_stat
 
 - name: Assert installed MinIO server checksum
   ansible.builtin.assert:
     that:
-      - minio_server_binary_stat.stat.checksum == _minio_binary_checksums[_minio_arch].minio
+      - anro_minio_server_binary_stat.stat.checksum == _anro_minio_binary_checksums[_anro_minio_arch].minio
     fail_msg: Installed MinIO server binary does not match the trusted build checksum.

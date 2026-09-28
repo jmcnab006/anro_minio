@@ -4,21 +4,21 @@ Description=MinIO Object Storage
 Documentation=https://github.com/minio/minio
 Wants=network-online.target
 After=network-online.target
-AssertFileIsExecutable={{ minio_server_bin }}
+AssertFileIsExecutable={{ anro_minio_server_bin }}
 
 [Service]
 Type=notify
-User={{ minio_server_user }}
-Group={{ minio_server_group }}
-EnvironmentFile={{ minio_server_envfile }}
-ExecStart={{ minio_server_bin }} server $MINIO_OPTS $MINIO_VOLUMES
+User={{ anro_minio_server_user }}
+Group={{ anro_minio_server_group }}
+EnvironmentFile={{ anro_minio_server_envfile }}
+ExecStart={{ anro_minio_server_bin }} server $MINIO_OPTS $MINIO_VOLUMES
 Restart=on-failure
 RestartSec=5s
 TimeoutStopSec=infinity
 LimitNOFILE=65536
 TasksMax=infinity
 
-{% if minio_systemd_hardening %}
+{% if anro_minio_systemd_hardening %}
 # Defense-in-depth. ReadWritePaths grants only the storage and certificate paths needed.
 NoNewPrivileges=true
 PrivateTmp=true
@@ -33,11 +33,11 @@ ProtectHostname=true
 RestrictSUIDSGID=true
 LockPersonality=true
 RestrictRealtime=true
-{% for path in minio_server_datadirs %}
+{% for path in anro_minio_server_datadirs %}
 ReadWritePaths={{ path }}
 {% endfor %}
-{% if minio_tls_enabled %}
-ReadOnlyPaths={{ minio_tls_cert_dir }}
+{% if anro_minio_tls_enabled %}
+ReadOnlyPaths={{ anro_minio_tls_cert_dir }}
 {% endif %}
 {% endif %}
 

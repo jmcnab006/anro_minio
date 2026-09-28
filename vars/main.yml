@@ -1,9 +1,9 @@
 ---
 # ansible_architecture -> Go architecture / vendored directory.
-_minio_arch_map:
+_anro_minio_arch_map:
   x86_64: amd64
   aarch64: arm64
 
-_minio_supported_distributions:
+_anro_minio_supported_distributions:
   - Debian
   - Ubuntu

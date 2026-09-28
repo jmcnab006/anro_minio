@@ -6,7 +6,7 @@ ROLE_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/versions.env"
 
-for value in MINIO_COMMIT MC_COMMIT; do
+for value in anro_minio_COMMIT MC_COMMIT; do
   commit="${!value}"
   if [[ ! "${commit}" =~ ^[0-9a-f]{40}$ ]]; then
     printf 'ERROR: %s must be a verified 40-character Git commit, got: %s\n' "${value}" "${commit}" >&2
@@ -35,7 +35,7 @@ build_one() {
 }
 
 for arch in amd64 arm64; do
-  build_one minio "${MINIO_REPOSITORY}" "${MINIO_COMMIT}" "${arch}"
+  build_one minio "${anro_minio_REPOSITORY}" "${anro_minio_COMMIT}" "${arch}"
   build_one mc "${MC_REPOSITORY}" "${MC_COMMIT}" "${arch}"
 done
 

@@ -3,7 +3,33 @@
   hosts: all
   become: true
   gather_facts: true
+
+  pre_tasks:
+    - name: Load MinIO binary checksum metadata
+      ansible.builtin.include_vars:
+        file: "../../vars/binary_checksums.yml"
+
+    - name: Load MinIO role variables
+      ansible.builtin.include_vars:
+        file: "../../vars/main.yml"
+
+    - name: Set MinIO architecture for verification
+      ansible.builtin.set_fact:
+        _anro_minio_verify_arch: >-
+          {{
+            {
+              'x86_64': 'amd64',
+              'aarch64': 'arm64'
+            }[ansible_architecture]
+          }}
   vars:
+    minio_root_user: molecule-root
+    minio_root_password: molecule-only-password-change-me
+    minio_server_bin: /usr/local/bin/minio
+    minio_client_bin: /usr/local/bin/mc
+    minio_server_envfile: /etc/default/minio
+    minio_server_user: minio
+    minio_server_group: minio
     _verify_alias: molecule
     _verify_bucket: ansible-molecule-e2e
     _verify_source: /tmp/minio-e2e-source
@@ -23,43 +49,54 @@
       ansible.builtin.stat:
         path: "{{ minio_server_bin }}"
         checksum_algorithm: sha256
-      register: minio_verify_server_binary
+      register: anro_minio_verify_server_binary
 
     - name: Stat installed MinIO client binary
       ansible.builtin.stat:
         path: "{{ minio_client_bin }}"
         checksum_algorithm: sha256
-      register: minio_verify_client_binary
+      register: anro_minio_verify_client_binary
 
     - name: Verify binaries are executable and match vendored checksums
       ansible.builtin.assert:
         that:
-          - minio_verify_server_binary.stat.executable
-          - minio_verify_client_binary.stat.executable
-          - minio_verify_server_binary.stat.checksum == _minio_binary_checksums[_minio_arch].minio
-          - minio_verify_client_binary.stat.checksum == _minio_binary_checksums[_minio_arch].mc
+          - anro_minio_verify_server_binary.stat.exists
+          - anro_minio_verify_server_binary.stat.isreg
+          - anro_minio_verify_server_binary.stat.executable
+          - anro_minio_verify_client_binary.stat.exists
+          - anro_minio_verify_client_binary.stat.isreg
+          - anro_minio_verify_client_binary.stat.executable
+          - >-
+            anro_minio_verify_server_binary.stat.checksum ==
+            _anro_minio_binary_checksums[_anro_minio_verify_arch].minio
+          - >-
+            anro_minio_verify_client_binary.stat.checksum ==
+            _anro_minio_binary_checksums[_anro_minio_verify_arch].mc
+        fail_msg: >-
+          Installed MinIO binaries do not match the vendored binaries
+          for {{ _anro_minio_verify_arch }}.
 
     - name: Read MinIO environment file metadata
       ansible.builtin.stat:
         path: "{{ minio_server_envfile }}"
-      register: minio_verify_envfile
+      register: anro_minio_verify_envfile
 
     - name: Verify credential file permissions
       ansible.builtin.assert:
         that:
-          - minio_verify_envfile.stat.mode == '0640'
-          - minio_verify_envfile.stat.pw_name == 'root'
-          - minio_verify_envfile.stat.gr_name == minio_server_group
+          - anro_minio_verify_envfile.stat.mode == '0640'
+          - anro_minio_verify_envfile.stat.pw_name == 'root'
+          - anro_minio_verify_envfile.stat.gr_name == minio_server_group
 
     - name: Verify MinIO readiness endpoint
       ansible.builtin.uri:
         url: http://127.0.0.1:9000/minio/health/ready
         method: GET
         status_code: 200
-      register: minio_verify_health
+      register: anro_minio_verify_health
       retries: 20
       delay: 1
-      until: minio_verify_health.status == 200
+      until: anro_minio_verify_health.status == 200
 
     - name: Verify systemd hardening properties
       ansible.builtin.command:
@@ -70,17 +107,25 @@
           - --property=NoNewPrivileges
           - --property=PrivateTmp
           - --property=ProtectSystem
-      register: minio_verify_systemd
+      register: anro_minio_verify_systemd
       changed_when: false
 
     - name: Assert systemd hardening is active
       ansible.builtin.assert:
         that:
-          - "'NoNewPrivileges=yes' in minio_verify_systemd.stdout"
-          - "'PrivateTmp=yes' in minio_verify_systemd.stdout"
-          - "'ProtectSystem=strict' in minio_verify_systemd.stdout"
+          - "'NoNewPrivileges=yes' in anro_minio_verify_systemd.stdout"
+          - "'PrivateTmp=yes' in anro_minio_verify_systemd.stdout"
+          - "'ProtectSystem=strict' in anro_minio_verify_systemd.stdout"
 
-    - name: Configure isolated mc test alias
+    - name: Set node-specific MinIO verification variables
+      ansible.builtin.set_fact:
+        _anro_minio_verify_bucket: >-
+          molecule-{{ inventory_hostname | lower | regex_replace('[^a-z0-9-]', '-') }}
+        _anro_minio_verify_object: "object.txt"
+        _anro_minio_verify_content: >-
+          MinIO Molecule E2E test from {{ inventory_hostname }}
+
+    - name: Configure local MinIO client
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
@@ -88,14 +133,14 @@
           - /tmp/mc-molecule
           - alias
           - set
-          - "{{ _verify_alias }}"
-          - http://127.0.0.1:9000
+          - molecule
+          - "http://127.0.0.1:9000"
           - "{{ minio_root_user }}"
           - "{{ minio_root_password }}"
       changed_when: false
       no_log: true
 
-    - name: Create end-to-end test bucket
+    - name: Create node-specific test bucket
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
@@ -103,75 +148,94 @@
           - /tmp/mc-molecule
           - mb
           - --ignore-existing
-          - "{{ _verify_alias }}/{{ _verify_bucket }}"
-      register: minio_verify_bucket_create
-      changed_when: "'created successfully' in minio_verify_bucket_create.stdout"
+          - "molecule/{{ _anro_minio_verify_bucket }}"
+      register: anro_minio_verify_bucket_create
+      changed_when: "'created successfully' in anro_minio_verify_bucket_create.stdout"
 
-    - name: Create end-to-end source object
+    - name: Create node-specific source object
       ansible.builtin.copy:
-        content: "{{ _verify_content }}"
-        dest: "{{ _verify_source }}"
+        content: "{{ _anro_minio_verify_content }}"
+        dest: /tmp/minio-molecule-source.txt
         owner: root
         group: root
         mode: "0600"
 
-    - name: Upload end-to-end object
+    - name: Upload node-specific object
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
           - --config-dir
           - /tmp/mc-molecule
           - cp
-          - "{{ _verify_source }}"
-          - "{{ _verify_alias }}/{{ _verify_bucket }}/object.txt"
+          - /tmp/minio-molecule-source.txt
+          - >-
+            molecule/{{ _anro_minio_verify_bucket }}/{{ _anro_minio_verify_object }}
       changed_when: true
 
-    - name: Download end-to-end object
+    - name: Verify node-specific object exists
+      ansible.builtin.command:
+        argv:
+          - "{{ minio_client_bin }}"
+          - --config-dir
+          - /tmp/mc-molecule
+          - stat
+          - >-
+            molecule/{{ _anro_minio_verify_bucket }}/{{ _anro_minio_verify_object }}
+      register: anro_minio_verify_object_stat
+      changed_when: false
+
+    - name: Download node-specific object
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
           - --config-dir
           - /tmp/mc-molecule
           - cp
-          - "{{ _verify_alias }}/{{ _verify_bucket }}/object.txt"
-          - "{{ _verify_result }}"
+          - >-
+            molecule/{{ _anro_minio_verify_bucket }}/{{ _anro_minio_verify_object }}
+          - /tmp/minio-molecule-downloaded.txt
       changed_when: true
 
-    - name: Read downloaded end-to-end object
+    - name: Read downloaded node-specific object
       ansible.builtin.slurp:
-        src: "{{ _verify_result }}"
-      register: minio_verify_downloaded_object
+        src: /tmp/minio-molecule-downloaded.txt
+      register: anro_minio_verify_downloaded_object
 
-    - name: Verify end-to-end object integrity
+    - name: Verify downloaded node-specific object
       ansible.builtin.assert:
         that:
-          - minio_verify_downloaded_object.content | b64decode == _verify_content
+          - >-
+            anro_minio_verify_downloaded_object.content | b64decode ==
+            _anro_minio_verify_content
+        fail_msg: >-
+          Object downloaded through {{ inventory_hostname }} does not match
+          the object uploaded through the same cluster endpoint.
 
-    - name: Remove end-to-end object
+    - name: Remove node-specific object
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
           - --config-dir
           - /tmp/mc-molecule
           - rm
-          - "{{ _verify_alias }}/{{ _verify_bucket }}/object.txt"
+          - >-
+            molecule/{{ _anro_minio_verify_bucket }}/{{ _anro_minio_verify_object }}
       changed_when: true
 
-    - name: Remove end-to-end bucket
+    - name: Remove node-specific bucket
       ansible.builtin.command:
         argv:
           - "{{ minio_client_bin }}"
           - --config-dir
           - /tmp/mc-molecule
           - rb
-          - "{{ _verify_alias }}/{{ _verify_bucket }}"
+          - "molecule/{{ _anro_minio_verify_bucket }}"
       changed_when: true
 
-    - name: Remove Molecule client credentials and temporary objects
+    - name: Remove local E2E test files
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent
       loop:
-        - /tmp/mc-molecule
-        - "{{ _verify_source }}"
-        - "{{ _verify_result }}"
+        - /tmp/minio-molecule-source.txt
+        - /tmp/minio-molecule-downloaded.txt

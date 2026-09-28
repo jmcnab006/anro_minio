@@ -4,25 +4,25 @@
 
 - name: Install MinIO prerequisites
   ansible.builtin.package:
-    name: "{{ minio_packages }}"
+    name: "{{ anro_minio_packages }}"
     state: present
 
 - name: Install MinIO server
   ansible.builtin.import_tasks: install-server.yml
-  when: minio_install_server | bool
+  when: anro_minio_install_server | bool
 
 - name: Install MinIO client
   ansible.builtin.import_tasks: install-client.yml
-  when: minio_install_client | bool
+  when: anro_minio_install_client | bool
 
 - name: Wipe MinIO data directories
   ansible.builtin.import_tasks: wipe-drives.yml
   when:
-    - minio_wipe_all_drives | bool
-    - minio_wipe_all_drives_confirm | bool
+    - anro_minio_wipe_all_drives | bool
+    - anro_minio_wipe_all_drives_confirm | bool
 
 - name: Configure MinIO server
   ansible.builtin.import_tasks: configure-server.yml
   when:
-    - minio_install_server | bool
-    - minio_configure_server | bool
+    - anro_minio_install_server | bool
+    - anro_minio_configure_server | bool
