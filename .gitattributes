@@ -1,0 +1,2 @@
+files/bin/*/minio filter=lfs diff=lfs merge=lfs -text
+files/bin/*/mc filter=lfs diff=lfs merge=lfs -text
