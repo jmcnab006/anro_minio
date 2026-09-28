@@ -1,0 +1,26 @@
+---
+# Docker configuration for Molecule testing.
+ansible_connection: community.docker.docker
+
+container_command: /lib/systemd/systemd # noqa: var-naming[no-role-prefix]
+container_privileged: true # noqa: var-naming[no-role-prefix]
+container_log_driver: json-file # noqa: var-naming[no-role-prefix]
+container_volumes: # noqa: var-naming[no-role-prefix]
+  - /sys/fs/cgroup:/sys/fs/cgroup:rw
+container_tmpfs: # noqa: var-naming[no-role-prefix]
+  - /run
+  - /tmp
+container_published_ports: # noqa: var-naming[no-role-prefix]
+  - 9001:9001
+  - 9000:9000
+
+# Role test variables.
+
+anro_minio_server_datadirs:
+  - /var/lib/minio
+anro_minio_server_cluster_nodes:
+  - "/var/lib/minio/drive1"
+  - "/var/lib/minio/drive2"
+
+anro_minio_server_release_url: https://dl.minio.io/aistor/minio/release/linux-amd64/minio_20260919170525.0.0_amd64.deb
+anro_minio_client_release_url: https://dl.minio.io/aistor/mc/release/linux-amd64/mcli_20260919152459.0.0_amd64.deb
