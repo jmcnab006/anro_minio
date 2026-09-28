@@ -27,7 +27,9 @@ WORKDIR /src/source
 
 ENV CGO_ENABLED=0 \
     GOOS=linux \
-    MINIO_RELEASE="${SOURCE_RELEASE}"
+    MINIO_RELEASE="${SOURCE_RELEASE}" \
+    MC_RELEASE="${SOURCE_RELEASE}"
+
 # MinIO and mc provide gen-ldflags.go to generate their own version metadata.
 # Generate the flags for the native build host before setting GOARCH for the
 # cross-compiled target binary.
