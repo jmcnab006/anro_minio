@@ -12,4 +12,4 @@
         anro_minio_server_datadirs:
           - /data
         anro_minio_server_cluster_nodes:
-          - http://172.31.0.2{1...4}:9000/data
+          - http://minio-ubuntu2604-node0{1...4}:9000/data
