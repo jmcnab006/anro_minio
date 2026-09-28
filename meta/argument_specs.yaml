@@ -1,0 +1,110 @@
+---
+argument_specs:
+  main:
+    short_description: 'Install and configure minio s3 object storage'
+    description: >
+      Installs minio package and mc client command and configures environment and variables.
+    author: Jeremy McNab
+    options:
+      anro_minio_install_server:
+        type: 'bool'
+        default: true
+        description: 'Enables or disables installing the minio server.'
+      anro_minio_install_client:
+        type: 'bool'
+        default: true
+        description: 'Enables or disables installing the minio mc client command.'
+      anro_minio_configure_server:
+        type: 'bool'
+        default: true
+        description: 'Enables or disables configuring the minio server.'
+      anro_minio_admin_user:
+        type: 'str'
+        default: 'admin'
+        description: 'Sets default console login user.'
+      anro_minio_admin_password:
+        type: 'str'
+        default: 'password'
+        description: 'Sets default console login user. Absolutely should be changed no matter what.'
+      anro_minio_server_console_addr:
+        type: 'str'
+        default: ''
+        description: 'Default address for binding minio console.'
+      anro_minio_server_console_port:
+        type: 'str'
+        default: '9001'
+        description: 'Default port for binding minio console.'
+      anro_minio_server_api_addr:
+        type: 'str'
+        default: ''
+        description: 'Default address for binding minio api.'
+      anro_minio_server_api_port:
+        type: 'str'
+        default: '9000'
+        description: 'Default port for binding minio api.'
+      anro_minio_server_ssl_certificate:
+        type: 'str'
+        default: ""
+        description: 'Default file path minio should use for a SSL certificate.'
+      anro_minio_server_ssl_key:
+        type: 'str'
+        default: ""
+        description: 'Default file path minio should use for a SSL key.'
+      anro_minio_server_binary:
+        type: 'str'
+        default: '/usr/local/bin/minio'
+        description: 'Top level domain for the fully qualified hostname and message-of-the-day template.'
+      anro_minio_client_binary:
+        type: 'str'
+        default: '/usr/local/bin/minio'
+        description: 'Top level domain for the fully qualified hostname and message-of-the-day template.'
+      anro_minio_client_release_url:
+        type: 'str'
+        default: ""
+        description: >
+          URL to download and install a specific version of minio client. An example URL would look like:
+          "https://dl.minio.io/client/mc/release/linux-amd64/archive/mcli_20250721052808.0.0_amd64.deb"
+      anro_minio_server_release_url:
+        type: 'str'
+        default: ""
+        description: >
+          URL to download and install a specific version of minio server. An example URL would look like:
+          "https://dl.minio.io/server/minio/release/linux-amd64/archive/minio_20250723155402.0.0_amd64.deb"
+      anro_minio_server_user:
+        type: 'str'
+        default: 'minio'
+        description: 'Default user to run the minio server as.'
+      anro_minio_server_group:
+        type: 'str'
+        default: 'minio'
+        description: 'Default group to run the minio server as.'
+      anro_minio_server_envfile:
+        type: 'str'
+        default: '/etc/default/minio'
+        description: 'Environment file minio uses for its environment variable definitions.'
+      anro_minio_server_datadirs:
+        type: 'list'
+        default: ['/var/lib/minio']
+        description: 'List of data directories to use for object storage. Typically formatted one per mounted disk.'
+      anro_minio_server_cluster_nodes:
+        type: 'list'
+        default: []
+        description: >
+          Minio server cluster node list. Set when deploying distributed multi-node setup.
+          ex. https://minio-0{1...5}.example.com:9000/mnt/minio-disk{1...2}
+      anro_minio_server_env_extra:
+        type: 'list'
+        default: []
+        description: 'List of additional environment variables to be set in minio server environment.'
+      anro_minio_server_opts:
+        type: 'list'
+        default: []
+        description: 'list of additional command line arguments passed to the server on startup.'
+      anro_minio_wipe_all_drives:
+        type: 'bool'
+        default: false
+        description: 'Wipe of all data on all defined {{ anro_minio_server_datadirs }}. Do not use in production plays!!'
+      anro_minio_allow_downgrade:
+        type: 'bool'
+        default: false
+        description: 'Allow downgrading version via package installation'
