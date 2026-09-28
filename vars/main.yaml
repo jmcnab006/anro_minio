@@ -6,4 +6,4 @@ anro_minio_go_arch_map:
   armv7l: 'arm'
   armv6l: 'arm6vl'
 
-anro_minio_go_arch: "{{ anro_minio_go_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+_anro_minio_go_arch: "{{ anro_minio_go_arch_map[ansible_architecture] | default(ansible_architecture) }}"

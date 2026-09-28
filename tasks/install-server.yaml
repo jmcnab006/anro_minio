@@ -29,7 +29,7 @@
   block:
     - name: Set the Minio server download base url
       ansible.builtin.set_fact:
-        _minio_server_download_base_url: "https://dl.minio.io/server/minio/release/linux-{{ go_arch }}"
+        _minio_server_download_base_url: "https://dl.minio.io/server/minio/release/linux-{{ _anro_minio_go_arch }}"
 
     - name: Build the Minio server download url with lastest release
       ansible.builtin.set_fact:

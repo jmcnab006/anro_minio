@@ -1,0 +1,5 @@
+---
+- name: Verify minio role end to end
+  hosts: server
+  become: true
+  gather_facts: true
