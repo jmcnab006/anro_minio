@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 role = Path(sys.argv[1]).resolve()
-architectures = ("amd64", "arm64")
+# architectures = ("amd64", "arm64")
+architectures = ["amd64"]
 names = ("minio", "mc")
 checksums: dict[str, dict[str, str]] = {}
 lines: list[str] = []

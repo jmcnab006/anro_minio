@@ -10,6 +10,18 @@
         anro_minio_root_user: molecule-root
         anro_minio_root_password: molecule-only-password-change-me
         anro_minio_server_datadirs:
-          - /data
+          - /data1
+          - /data2
+          - /data3
+          - /data4
         anro_minio_server_cluster_nodes:
-          - http://minio-ubuntu2604-node0{1...4}:9000/data
+          - http://minio-ubuntu2604-node0{1...4}:9000/data{1...4}
+        anro_minio_server_env_extra:
+          - name: MINIO_STORAGE_CLASS_STANDARD
+            value: "EC:3"
+          - name: MINIO_DELETE_EMPTY_PREFIXES
+            value: "true"
+          - name: MINIO_ERASURE_SET_DRIVE_COUNT
+            value: 8
+        anro_minio_wipe_all_drives: false
+        anro_minio_wipe_all_drives_confirm: false

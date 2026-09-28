@@ -1,20 +1,71 @@
 ---
-# Deliberately implemented with file state transitions rather than rm -rf. The double
-# opt-in is validated before this task file can execute.
-- name: Stop MinIO before destructive data wipe
+# Destructive operation: both variables must explicitly be enabled.
+- name: Validate MinIO drive wipe request
+  ansible.builtin.assert:
+    that:
+      - anro_minio_wipe_all_drives | bool
+      - anro_minio_wipe_all_drives_confirm | bool
+      - anro_minio_server_datadirs | length > 0
+      - "'/' not in anro_minio_server_datadirs"
+      - >-
+        (
+          anro_minio_server_datadirs
+          | select('match', '^/')
+          | list
+          | length
+        ) == (anro_minio_server_datadirs | length)
+    fail_msg: >-
+      Refusing destructive MinIO storage wipe. Both wipe variables must be
+      true, at least one data directory must be configured, every data
+      directory must be an absolute path, and '/' must never be used.
+
+- name: Stop MinIO before wiping storage
   ansible.builtin.systemd_service:
     name: "{{ anro_minio_server_service }}"
     state: stopped
-  failed_when: false
   when: anro_minio_configure_server | bool
 
-- name: Remove MinIO data directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
+# Do not remove the data directories themselves. They may be mount points
+# backed by dedicated filesystems or Docker volumes.
+- name: Check whether MinIO data directories contain data
+  ansible.builtin.command:
+    argv:
+      - find
+      - "{{ item }}"
+      - -mindepth
+      - "1"
+      - -print
+      - -quit
   loop: "{{ anro_minio_server_datadirs }}"
+  loop_control:
+    label: "{{ item }}"
+  register: anro_minio_drive_content_checks
+  changed_when: false
+  when: anro_minio_configure_server | bool
 
-- name: Recreate empty MinIO data directories
+# `find -mindepth 1 -delete` removes everything below the mount point while
+# preserving the mounted directory itself. command is used instead of shell
+# because no shell functionality is required.
+- name: Remove all contents from non-empty MinIO data directories
+  ansible.builtin.command:
+    argv:
+      - find
+      - "{{ item.item }}"
+      - -mindepth
+      - "1"
+      - -delete
+  loop: "{{ anro_minio_drive_content_checks.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - anro_minio_configure_server | bool
+    - not item.skipped | default(false)
+    - item.stdout | default('') | length > 0
+  changed_when: true
+
+# Wiping a mounted filesystem must not change or remove the mount point.
+# Reassert the ownership and permissions required by MinIO after the wipe.
+- name: Ensure MinIO data directories have correct ownership and permissions
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -22,3 +73,6 @@
     group: "{{ anro_minio_server_group }}"
     mode: "0750"
   loop: "{{ anro_minio_server_datadirs }}"
+  loop_control:
+    label: "{{ item }}"
+  when: anro_minio_configure_server | bool

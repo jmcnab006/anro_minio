@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: binaries lint syntax molecule test
+.PHONY: binaries clean lint syntax molecule test
 
 binaries:
 	./build/build.sh
@@ -14,3 +14,4 @@ molecule:
 	molecule test
 
 test: lint molecule
+

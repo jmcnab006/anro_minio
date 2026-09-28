@@ -23,7 +23,10 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       # MinIO rejects storage on the root filesystem. Give each cluster
       # member an independent Docker volume to simulate dedicated storage.
-      - minio-node01-data:/data
+      - minio-node01-data1:/data1
+      - minio-node01-data2:/data2
+      - minio-node01-data3:/data3
+      - minio-node01-data4:/data4
     tmpfs:
       - /run
       - /run/lock
@@ -50,7 +53,11 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       # MinIO rejects storage on the root filesystem. Give each cluster
       # member an independent Docker volume to simulate dedicated storage.
-      - minio-node02-data:/data
+      - minio-node02-data1:/data1
+      - minio-node02-data2:/data2
+      - minio-node02-data3:/data3
+      - minio-node02-data4:/data4
+
     tmpfs:
       - /run
       - /run/lock
@@ -72,7 +79,11 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       # MinIO rejects storage on the root filesystem. Give each cluster
       # member an independent Docker volume to simulate dedicated storage.
-      - minio-node03-data:/data
+      - minio-node03-data1:/data1
+      - minio-node03-data2:/data2
+      - minio-node03-data3:/data3
+      - minio-node03-data4:/data4
+
     tmpfs:
       - /run
       - /run/lock
@@ -94,7 +105,11 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       # MinIO rejects storage on the root filesystem. Give each cluster
       # member an independent Docker volume to simulate dedicated storage.
-      - minio-node04-data:/data
+      - minio-node04-data1:/data1
+      - minio-node04-data2:/data2
+      - minio-node04-data3:/data3
+      - minio-node04-data4:/data4
+
     tmpfs:
       - /run
       - /run/lock
