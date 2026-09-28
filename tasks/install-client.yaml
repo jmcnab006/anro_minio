@@ -1,0 +1,61 @@
+---
+# Download and install the latest binary
+- name: Download and install latest client release
+  when:
+    - anro_minio_client_release_url | length == 0
+  block:
+    - name: Set the Minio client download base url
+      ansible.builtin.set_fact:
+        _minio_client_download_base_url: "https://dl.minio.io/client/mc/release/linux-{{ go_arch }}"
+    - name: Build the Minio client download url with lastest release
+      ansible.builtin.set_fact:
+        _minio_client_download_url: "{{ _minio_client_download_base_url }}/mc"
+
+    - name: Get the Minio client checksum for client latest release
+      ansible.builtin.set_fact:
+        _minio_client_checksum: "{{ lookup('url', _minio_client_download_url + '.sha256sum').split(' ')[0] }}"
+
+    - name: Download the latest Minio client
+      ansible.builtin.get_url:
+        url: "{{ _minio_client_download_url }}"
+        dest: "{{ anro_minio_client_binary }}"
+        owner: "root"
+        group: "root"
+        mode: "0755"
+        checksum: "sha256:{{ _minio_client_checksum }}"
+      register: _download_client
+      until: _download_client is succeeded
+      retries: 5
+      delay: 2
+
+- name: "Set the Minio client download base url {{ minio_client_download_base_url }}"
+  ansible.builtin.set_fact:
+    _minio_client_download_base_url: "{{ minio_client_download_base_url }}"
+  when: minio_client_download_base_url is defined
+
+# Download a specific package and install
+- name: Download and install specific release
+  when:
+    - anro_minio_client_release_url | length > 0
+  block:
+    - name: Get the Minio client checksum for client specific release
+      ansible.builtin.set_fact:
+        _minio_client_checksum: "{{ lookup('url', anro_minio_client_release_url + '.sha256sum').split(' ')[0] }}"
+
+    - name: Download the Minio client deb package and test checksum
+      ansible.builtin.get_url:
+        url: "{{ anro_minio_client_release_url }}"
+        dest: "/tmp/{{ anro_minio_client_release_url | basename }}"
+        owner: "root"
+        group: "root"
+        mode: "0755"
+        checksum: "sha256:{{ _minio_client_checksum }}"
+      register: _download_client
+      until: _download_client is succeeded
+      retries: 5
+      delay: 2
+
+    - name: Apt install minio client and restart
+      ansible.builtin.apt:
+        deb: "/tmp/{{ anro_minio_client_release_url | basename }}"
+        allow_downgrade: true

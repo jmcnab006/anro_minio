@@ -1,0 +1,36 @@
+---
+
+- name: Stop minio and wipe drives
+  when:
+    - minio_wipe_all_drives is defined
+    - minio_wipe_all_drives | bool
+  block:
+
+    - name: Stop minio services
+      ansible.builtin.service:
+        name: minio
+        state: stopped
+
+    - name: Get data directories
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        file_type: directory
+        hidden: true
+        recurse: false
+      register: minio_directory_content
+      loop: "{{ minio_server_datadirs }}"
+
+    - name: Set fact for wipe directories
+      ansible.builtin.set_fact:
+        directories_to_remove: "{{ directories_to_remove | default([]) + item.files | map(attribute='path') | list }}"
+      loop: "{{ minio_directory_content.results }}"
+      no_log: true
+
+    - name: Remove directory content
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      with_items: "{{ directories_to_remove }}"
+      when: directories_to_remove is defined
+      notify:
+        Restart minio

@@ -1,0 +1,13 @@
+---
+# makes sure minio handlers are flushed and that the service is running.
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Make sure minio service is running
+  ansible.builtin.debug:
+    msg: " {{ ansible_facts['services']['minio.service']['state'] }}"
+  register: service_result
+  failed_when: service_result.msg != ' running'

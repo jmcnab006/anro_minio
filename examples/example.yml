@@ -1,0 +1,12 @@
+---
+- name: Example playbook single node multi-drive
+  hosts:
+    - node01
+  roles:
+    - role: anro_minio
+      vars:
+        anro_minio_server_datadirs:
+          - /var/lib/minio
+        anro_minio_server_cluster_nodes:
+          - "/var/lib/minio/drive1"
+          - "/var/lib/minio/drive2"

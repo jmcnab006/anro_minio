@@ -1,4 +1,4 @@
-# USI Minio role
+# Ansible Minio role
 
 Install and Configure Minio S3 Object-Storage.
 
@@ -42,7 +42,7 @@ Use the role name specified in the `requirements.yaml` to utilize the play in a 
           - /data/disk2
         minio_server_cluster_nodes:
           - http://minio0{1...4}.example.com:9000/data/disk{1...2}
-        minio_root_user: usiadmin
+        minio_root_user: admin
         minio_root_password: "{{ vault_minio_password }}"
         minio_server_env_extra:
           - name: MINIO_BROWSER_REDIRECT_URL

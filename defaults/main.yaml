@@ -1,0 +1,65 @@
+---
+#
+# Switches to enable/disable the Minio server and/or Minio client installation
+anro_minio_install_server: true
+anro_minio_install_client: true
+anro_minio_configure_server: true
+
+# Default root user. Provide at role execution
+anro_minio_admin_user: 'admin'
+anro_minio_admin_password: 'password'
+
+# Runtime user and group for the Minio server service
+anro_minio_server_user: 'minio'
+anro_minio_server_group: 'minio'
+
+# Minio server listen address
+anro_minio_server_console_addr: ''
+anro_minio_server_console_port: '9001'
+anro_minio_server_api_addr: ''
+anro_minio_server_api_port: '9000'
+
+# Minio release to install. defaults to latest when values are empty or specify binary release
+# (i.e. RELEASE.2022-10-29T06-21-33Z)
+# https://dl.minio.io/server/minio/release/linux-amd64/archive/
+# https://dl.minio.io/server/minio/release/linux-amd64/archive/minio_20241218131544.0.0_amd64.deb
+# the releases are listed as a timestamp in the archive "20241218131544.0.0" which is what the minio_server_release
+# should be
+# ex. "https://dl.minio.io/server/minio/release/linux-amd64/archive/minio_20250723155402.0.0_amd64.deb"
+# ex. "https://dl.minio.io/client/mc/release/linux-amd64/archive/mcli_20250721052808.0.0_amd64.deb"
+# Default download URL for Minio server is 'https://dl.minio.io/server/minio/release/linux-amd64/archive/'
+# Default download URL for Minio client is 'https://dl.minio.io/client/mc/release/linux-amd64/archive/'
+anro_minio_server_release_url: ""
+anro_minio_client_release_url: ""
+
+# Minio binaries path
+anro_minio_server_binary: '/usr/local/bin/minio'
+anro_minio_client_binary: '/usr/local/bin/mc'
+
+# Path to the file containing the ENV variables for the Minio server
+anro_minio_server_envfile: '/etc/default/minio'
+
+# Minio server data directories
+anro_minio_server_datadirs:
+  - /var/lib/minio
+
+# When set to true Ansible will create the minio_server_datadirs
+anro_minio_server_make_datadirs: true
+
+# Minio server cluster node list. Set when deploying distributed multi-node setup (i.e. - https://minio-0{1...5}.example.com:9000/mnt/minio-disk{1...2})
+anro_minio_server_cluster_nodes: []
+
+# Additional environment variables to be set in minio server environment
+anro_minio_server_env_extra: []
+
+# Additional Minio server CLI options
+anro_minio_server_opts: []
+
+# Optional: Path to certificate and private key that should be used by the server
+anro_minio_ssl_certificate: ""
+anro_minio_ssl_ca: ""
+anro_minio_ssl_key: ""
+
+# Wipes all data from all data drives specified in {{ minio_server_datadirs }}. Use with EXTREME CAUTION THE DATA IS UNRECOVERABLE.
+anro_minio_wipe_all_drives: false
+anro_minio_allow_downgrade: false

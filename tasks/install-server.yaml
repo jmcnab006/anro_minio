@@ -1,0 +1,84 @@
+---
+
+- name: Create Minio group
+  ansible.builtin.group:
+    name: "{{ anro_minio_server_group }}"
+    state: present
+
+- name: Create Minio user
+  ansible.builtin.user:
+    name: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
+    system: "yes"
+    shell: "/usr/sbin/nologin"
+
+- name: Create the Minio data storage directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ anro_minio_server_user }}"
+    group: "{{ anro_minio_server_group }}"
+    mode: "0750"
+  when: anro_minio_server_make_datadirs
+  with_items: "{{ anro_minio_server_datadirs }}"
+
+# Download the latest binary file from minio of we have no url specified in our {{ anro_minio_server_release_url }}
+- name: Download and install the latest release
+  when:
+    - anro_minio_server_release_url | length == 0
+  block:
+    - name: Set the Minio server download base url
+      ansible.builtin.set_fact:
+        _minio_server_download_base_url: "https://dl.minio.io/server/minio/release/linux-{{ go_arch }}"
+
+    - name: Build the Minio server download url with lastest release
+      ansible.builtin.set_fact:
+        _minio_server_download_url: "{{ _minio_server_download_base_url }}/minio"
+
+    - name: "Get the Minio server checksum for lastest release"
+      ansible.builtin.set_fact:
+        _minio_server_checksum: "{{ lookup('url', _minio_server_download_url + '.sha256sum').split(' ')[0] }}"
+
+    - name: Download the Minio server binary and restart
+      ansible.builtin.get_url:
+        url: "{{ _minio_server_download_url }}"
+        dest: "{{ anro_minio_server_binary }}"
+        owner: "root"
+        group: "root"
+        mode: "0755"
+        checksum: "sha256:{{ _minio_server_checksum }}"
+      register: _download_server
+      until: _download_server is succeeded
+      retries: 5
+      delay: 2
+      notify: Restart minio
+
+# This pulls from the archive so the file path is different. We would need to download the debian package and install it
+# https://dl.minio.io/server/minio/release/linux-amd64/archive/minio_20250120144907.0.0_amd64.deb
+
+- name: Download and install specific release
+  when:
+    - anro_minio_server_release_url | length > 0
+  notify: Restart minio
+  block:
+    - name: "Get the Minio server download checksum"
+      ansible.builtin.set_fact:
+        _minio_server_checksum: "{{ lookup('url', anro_minio_server_release_url + '.sha256sum').split(' ')[0] }}"
+
+    - name: Download the Minio server package and test checksum
+      ansible.builtin.get_url:
+        url: "{{ anro_minio_server_release_url }}"
+        dest: "/tmp/{{ anro_minio_server_release_url | basename }}"
+        owner: "root"
+        group: "root"
+        mode: "0755"
+        checksum: "sha256:{{ _minio_server_checksum }}"
+      register: _download_server
+      until: _download_server is succeeded
+      retries: 5
+      delay: 2
+
+    - name: Apt install minio server package
+      ansible.builtin.apt:
+        deb: "/tmp/{{ anro_minio_server_release_url | basename }}"
+        allow_downgrade: "{{ anro_minio_allow_downgrade }}"
